@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd">
+	<!-- 注解设置 -->
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+	<context:component-scan base-package="com.ordering.admin"></context:component-scan>
+	<context:component-scan base-package="com.ordering.seller"></context:component-scan>
+	<!-- mvc注解驱动 -->
+	<mvc:annotation-driven></mvc:annotation-driven>
+	<!-- 设置数据库源 -->
+	<bean class="com.mchange.v2.c3p0.ComboPooledDataSource" id="ds">
+		<property name="jdbcUrl" value="jdbc:mysql://localhost:3306/onlineadmin"></property>
+		<property name="driverClass" value="com.mysql.jdbc.Driver"></property>
+		<property name="user" value="root"></property>
+		<property name="password" value="1234"></property>
+		<property name="acquireIncrement" value="3"></property>
+		<property name="initialPoolSize" value="5"></property>
+		<property name="minPoolSize" value="2"></property>
+		<property name="maxPoolSize" value="8"></property>
+	</bean>
+	
+	<bean class="com.ordering.utils.JdbcUtils" id="jdbcUtils">
+		<property name="ds">
+			<ref bean="ds"></ref>
+		</property>
+	</bean>
+	
+	<!-- JPA实体管理工厂的配置 使用@PersistenceContext会自动注入EntityManager,可以使用 @PersistenceUnit注入entityManagerFactory -->
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="ds" />
+		<property name="persistenceUnitName" value="unitName"></property>
+		<property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter" />
+		
+		<!-- 待扫描的实体类包，不再需要persistence.xml -->
+		
+		<property name="packagesToScan" value="com.ordering" />
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">true</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<!--
+		指定实现JPA的适配器，主要作用如下：
+		1、取代persistence.xml中的<provider>
+		2、指定方言
+		3、通知“entityManagerFactory”产生什么样的entityManager
+		4、还可以使用EclipseLinkJpaVendorAdapter(Toplink)，openJpaVendorAdapter
+	 -->
+	<bean id="hibernateJpaVendorAdapter"
+		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+		<property name="databasePlatform" value="org.hibernate.dialect.MySQLDialect" />
+	</bean>
+	
+	<!-- 
+		Jpa 事务配置 
+	-->
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+	
+	<tx:annotation-driven 
+		transaction-manager="transactionManager"
+		proxy-target-class="false" />
+	
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		
+		<property name="prefix" value="/"></property>
+		<property name="suffix" value=".jsp"></property>
+		
+	</bean>
+	
+	<!-- 真正可以产生Connection的ConnectionFactory，由对应的 JMS服务厂商提供 -->
+	<bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<property name="brokerURL" value="tcp://localhost:61616" />
+	</bean>
+	
+	<!-- Spring用于管理真正的ConnectionFactory的ConnectionFactory -->
+	<bean id="connectionFactory"
+		class="org.springframework.jms.connection.SingleConnectionFactory">
+		<!-- 目标ConnectionFactory对应真实的可以产生JMS Connection的ConnectionFactory -->
+		<property name="targetConnectionFactory" ref="targetConnectionFactory" />
+	</bean>
+	
+	<bean id="pooledConnectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">
+		<property name="connectionFactory" ref="targetConnectionFactory" />
+		<property name="maxConnections" value="10" />
+	</bean>
+
+	<!-- Spring提供的JMS工具类，它可以进行消息发送、接收等 -->
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<!-- 这个connectionFactory对应的是我们定义的Spring提供的那个ConnectionFactory对象 -->
+		<property name="connectionFactory" ref="pooledConnectionFactory" />
+	</bean>
+	
+    <!--这个是队列目的地，点对点的-->
+    <bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg>
+            <value>JMSonline</value>
+        </constructor-arg>
+    </bean>
+    <!--这个是主题目的地，一对多的-->
+    <bean id="topicDestination" class="org.apache.activemq.command.ActiveMQTopic">
+        <constructor-arg value="topic01"/>
+    </bean>
+	
+</beans>

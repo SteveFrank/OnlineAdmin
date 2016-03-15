@@ -85,11 +85,12 @@ public class SellerDaoImpl implements SellerDao {
 		List<Seller> seller_list = entityManager.createQuery(jpql).getResultList();
 		pb.setRowCount(seller_list.size());
 		
+		int _pageSize = ((pageCurrent-1)*pageSize+pageSize);
 		if(((pageCurrent-1)*pageSize+pageSize)>seller_list.size()) {
-			pageSize = seller_list.size();
+			_pageSize = pageSize-(((pageCurrent-1)*pageSize+pageSize)-seller_list.size());
 		}
 		
-		seller_list.subList((pageCurrent-1)*pageSize, (pageCurrent-1)*pageSize+pageSize);
+		seller_list.subList((pageCurrent-1)*pageSize, (pageCurrent-1)*pageSize+_pageSize);
 		
 		pb.setBeanList(seller_list);
 		return pb;

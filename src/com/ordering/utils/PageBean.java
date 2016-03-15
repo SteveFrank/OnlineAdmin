@@ -10,6 +10,7 @@ import java.util.List;
 public class PageBean<T> {
 	
 	private int pageCurrent;//当前页码pageCurrent
+	@SuppressWarnings("unused")
 	private int pageCount;//总页数pageCount(计算得出)
 	private int rowCount;//总记录rowCount(根据查询的值即可得到)
 	private int pageSize;//每页记录数pageSize(根据需求设定)

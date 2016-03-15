@@ -18,6 +18,7 @@ public class AdminDaoImpl implements AdminDao {
 	@PersistenceContext(name="unitName")
 	private EntityManager entityManager;
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public Admin adminFindByEmailAndPassword(Admin admin) {
 		String jpql="select admin from com.ordering.admin.po.Admin admin where admin.aemail=:aemail and admin.apassword=:apassword";

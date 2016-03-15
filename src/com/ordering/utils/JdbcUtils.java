@@ -3,7 +3,6 @@ package com.ordering.utils;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import javax.annotation.Resource;
 import javax.sql.DataSource;
 
 /**
